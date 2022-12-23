@@ -1,6 +1,6 @@
-from tokens import Token, TokenType
-from lexer import Lexer
-from tree import Node, BinOp, UnaryOp, Number, ComplexStatement, StatementList, Statement, Variable
+from .tokens import Token, TokenType
+from .lexer import Lexer
+from .tree import Node, BinOp, UnaryOp, Number, ComplexStatement, StatementList, Statement, Variable
 
 
 class ParserException(Exception):
@@ -112,6 +112,9 @@ class Parser:
 
     if not st_list:
       st_list = StatementList()
+
+    if self.current_token.type == TokenType.END:
+      return st_list
 
     st_list.addStatement(self.statement())
 

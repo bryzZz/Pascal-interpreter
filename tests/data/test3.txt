@@ -1,5 +1,5 @@
 BEGIN
-  y: = 2;
+  y := 2;
   BEGIN
     a := 3;
     a := a;

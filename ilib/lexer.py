@@ -1,5 +1,5 @@
-from tokens import Token, TokenType, Words
-from utils import isLetter
+from .tokens import Token, TokenType, Words
+from .utils import isLetter
 
 
 class LexerException(Exception):

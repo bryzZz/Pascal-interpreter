@@ -1,5 +1,5 @@
 from abc import ABC
-from tokens import Token
+from .tokens import Token
 
 
 class Node(ABC):

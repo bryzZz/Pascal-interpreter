@@ -1,6 +1,6 @@
-from parser_1 import Parser
-from tree import NodeVisitor, Node, Number, BinOp, UnaryOp, ComplexStatement, StatementList, Statement, Variable
-from tokens import TokenType
+from .parser_1 import Parser
+from .tree import NodeVisitor, Node, Number, BinOp, UnaryOp, ComplexStatement, StatementList, Statement, Variable
+from .tokens import TokenType
 
 
 class InterpreterException(Exception):
@@ -98,22 +98,12 @@ class Interpreter(NodeVisitor):
     return result
 
   def eval(self, text: str):
+    self.current_complex_statement = None
+    self.scope_id = 0
     self.parser.init_parser(text)
+
     tree = self.parser.program()
 
     self.visit(tree)  # type: ignore
 
-    if tree:
-      variables = self.get_variables(tree)
-      print(variables)
-
-
-intr = Interpreter()
-# intr.eval("BEGIN\nEND.")
-
-# intr.eval("BEGIN\nx:= 2;BEGIN c := x; END;\ny:= 2;\nEND.")
-
-# intr.eval(
-#     "BEGIN\nx:= 2 + 3 * (2 + 3);\ny:= 2 / 2 - 2 + 3 * ((1 + 1) + (1 + 1));\nEND.")
-
-intr.eval("BEGIN\ny := 2;\nBEGIN\na := 3;\na := a;\nb := 10 + a + 10 * y / 4;\nc := a - b;\nEND;\nx := 11;\nEND.")
+    return self.get_variables(tree)  # type: ignore
