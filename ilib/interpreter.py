@@ -1,5 +1,5 @@
 from parser_1 import Parser
-from tree import Node, Number, BinOp, UnaryOp, StatementList, Statement, NodeVisitor
+from tree import NodeVisitor, Node, Number, BinOp, UnaryOp, ComplexStatement, StatementList, Statement, Variable
 from tokens import TokenType
 
 
@@ -10,14 +10,21 @@ class InterpreterException(Exception):
 class Interpreter(NodeVisitor):
   def __init__(self):
     self.parser = Parser()
-    self.variables = {}
+    self.current_complex_statement = None
+    self.scope_id = 0
 
   def visit(self, node: Node) -> float | None:
+    if isinstance(node, ComplexStatement):
+      return self.visit_complex_statement(node)
+
     if isinstance(node, StatementList):
       return self.visit_statement_list(node)
 
     if isinstance(node, Statement):
       return self.visit_statement(node)
+
+    if isinstance(node, Variable):
+      return self.visit_variable(node)
 
     if isinstance(node, Number):
       return self.visit_number(node)
@@ -52,12 +59,43 @@ class Interpreter(NodeVisitor):
 
     raise InterpreterException("Invalid binary operator")
 
+  def visit_variable(self, node: Variable):
+    complex_statement = self.current_complex_statement
+    var_name = node.value.value
+
+    while complex_statement != None:
+      if var_name in complex_statement.variables.keys():
+        return float(complex_statement.variables[var_name])
+
+      complex_statement = complex_statement.parent
+
+    raise InterpreterException(f'"{var_name}" does not exist in this scope')
+
   def visit_statement(self, node: Statement):
-    self.variables[node.id.value] = self.visit(node.expression)
+    self.current_complex_statement.variables[node.id.value] = self.visit(  # type: ignore
+        node.expression)
 
   def visit_statement_list(self, node: StatementList):
     for st in node.statements:
       self.visit_statement(st)
+
+  def visit_complex_statement(self, node: ComplexStatement):
+    self.current_complex_statement = node
+
+    self.visit_statement_list(node.statement_list)
+
+    for ncs in node.nest_complex_statements:
+      self.visit_complex_statement(ncs)
+
+  def get_variables(self, node: ComplexStatement, result={}):
+    for var in node.variables:
+      result[var] = node.variables[var]
+
+    for cs in node.nest_complex_statements:
+      self.scope_id += 1
+      result[self.scope_id] = self.get_variables(cs, {})
+
+    return result
 
   def eval(self, text: str):
     self.parser.init_parser(text)
@@ -65,16 +103,17 @@ class Interpreter(NodeVisitor):
 
     self.visit(tree)  # type: ignore
 
-    print(tree)
-    print(self.variables)
+    if tree:
+      variables = self.get_variables(tree)
+      print(variables)
 
 
 intr = Interpreter()
 # intr.eval("BEGIN\nEND.")
 
-# intr.eval("BEGIN\nx:= 2;\ny:= 2;\nEND.")
+# intr.eval("BEGIN\nx:= 2;BEGIN c := x; END;\ny:= 2;\nEND.")
 
-intr.eval(
-    "BEGIN\nx:= 2 + 3 * (2 + 3);\ny:= 2 / 2 - 2 + 3 * ((1 + 1) + (1 + 1));\nEND.")
+# intr.eval(
+#     "BEGIN\nx:= 2 + 3 * (2 + 3);\ny:= 2 / 2 - 2 + 3 * ((1 + 1) + (1 + 1));\nEND.")
 
-# intr.eval("-1.2 - 3")
+intr.eval("BEGIN\ny := 2;\nBEGIN\na := 3;\na := a;\nb := 10 + a + 10 * y / 4;\nc := a - b;\nEND;\nx := 11;\nEND.")

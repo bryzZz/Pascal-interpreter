@@ -1,6 +1,6 @@
 from tokens import Token, TokenType
 from lexer import Lexer
-from tree import Node, BinOp, UnaryOp, Number, Statement, StatementList
+from tree import Node, BinOp, UnaryOp, Number, ComplexStatement, StatementList, Statement, Variable
 
 
 class ParserException(Exception):
@@ -29,18 +29,25 @@ class Parser:
 
     token = self.current_token
 
+    if token.type == TokenType.ID:
+      self.check_type(TokenType.ID)
+      return Variable(token)
+
     if token.type == TokenType.NUMBER:
       self.check_type(TokenType.NUMBER)
       return Number(token)
-    elif token.type == TokenType.MINUS:
+
+    if token.type == TokenType.MINUS:
       self.check_type(TokenType.MINUS)
       result = self.factor()
       return UnaryOp(token, result)
-    elif token.type == TokenType.PLUS:
+
+    if token.type == TokenType.PLUS:
       self.check_type(TokenType.PLUS)
       result = self.factor()
       return UnaryOp(token, result)
-    elif token.type == TokenType.LPAREN:
+
+    if token.type == TokenType.LPAREN:
       self.check_type(TokenType.LPAREN)
       result = self.expr()
       self.check_type(TokenType.RPAREN)
@@ -99,36 +106,47 @@ class Parser:
 
     return Statement(id, expression)
 
-  def statement_list(self):
+  def statement_list(self, st_list: StatementList | None = None):
     if (self.current_token is None):
       raise ParserException("Current token is not defined")
 
-    st_list = StatementList()
+    if not st_list:
+      st_list = StatementList()
 
-    match self.current_token.type:
-      case TokenType.BEGIN:
-        ...
-      case TokenType.ID:
-        statement = self.statement()
-        st_list.addStatement(statement)
+    st_list.addStatement(self.statement())
 
-        self.check_type(TokenType.SEMI)
+    self.check_type(TokenType.SEMI)
 
-        if self.current_token.type == TokenType.ID:
-          st_list.statements.extend(
-              self.statement_list().statements)  # type: ignore
+    if self.current_token.type == TokenType.ID:
+      st_list.statements.extend(
+          self.statement_list().statements)  # type: ignore
 
-        return st_list
+    return st_list
 
-  def complex_statement(self):
+  def complex_statement(self, parent: ComplexStatement | None = None, current_closure: ComplexStatement | None = None):
     if (self.current_token is None):
       raise ParserException("Current token is not defined")
 
-    self.check_type(TokenType.BEGIN)
+    result = None
 
-    result = self.statement_list()
+    if current_closure:
+      self.statement_list(current_closure.statement_list)
+      result = current_closure
 
-    self.check_type(TokenType.END)
+    if self.current_token.type == TokenType.BEGIN:
+      self.check_type(TokenType.BEGIN)
+      result = ComplexStatement(self.statement_list(), parent)
+
+    if self.current_token.type == TokenType.BEGIN and result:
+      result.addComplexStatement(
+          self.complex_statement(result))  # type: ignore
+
+    if self.current_token.type == TokenType.END:
+      self.check_type(TokenType.END)
+
+    if self.current_token.type == TokenType.SEMI:
+      self.check_type(TokenType.SEMI)
+      self.complex_statement(current_closure=parent)
 
     return result
 
@@ -136,10 +154,10 @@ class Parser:
     if (self.current_token is None):
       raise ParserException("Current token is not defined")
 
-    result = self.complex_statement()
+    complex_statement = self.complex_statement()
 
     if self.current_token.type == TokenType.DOT:
-      return result
+      return complex_statement
 
     raise ParserException("Expercted dot at the very end")
 

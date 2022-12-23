@@ -33,12 +33,12 @@ class UnaryOp(Node):
     return f"UnOp {self.op.value}, {self.right}"
 
 
-class Program(Node):
-  def __init__(self) -> None:
-    ...
+class Variable(Node):
+  def __init__(self, value: Token) -> None:
+    self.value = value
 
   def __str__(self) -> str:
-    return f"Program"
+    return f'Variable {self.value}'
 
 
 class Statement(Node):
@@ -58,7 +58,21 @@ class StatementList(Node):
     self.statements.append(statement)
 
   def __str__(self) -> str:
-    return "\n".join([str(st) for st in self.statements])
+    return "StatementList \n" + "\n".join([str(st) for st in self.statements])
+
+
+class ComplexStatement(Node):
+  def __init__(self, statement_list: StatementList, parent) -> None:
+    self.statement_list = statement_list
+    self.nest_complex_statements = []
+    self.parent = parent
+    self.variables = dict()
+
+  def addComplexStatement(self, complexStatement: "ComplexStatement"):
+    self.nest_complex_statements.append(complexStatement)
+
+  def __str__(self) -> str:
+    return "ComplexStatement:" + "\n" + str(self.statement_list) + "\n" + "\n".join([str(st) for st in self.nest_complex_statements])
 
 
 class NodeVisitor:
