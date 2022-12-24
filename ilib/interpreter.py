@@ -106,4 +106,4 @@ class Interpreter(NodeVisitor):
 
     self.visit(tree)  # type: ignore
 
-    return self.get_variables(tree)  # type: ignore
+    return tree, self.get_variables(tree)  # type: ignore
