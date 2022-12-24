@@ -18,3 +18,6 @@ class TestInterpreter:
       test = f.read()
       assert self.inter.eval(test) == {'x': 11.0, 'y': 2.0, 1: {
           'a': 3.0, 'b': 18.0, 'c': -15.0}}
+
+  def test_lexer(self):
+    ...
